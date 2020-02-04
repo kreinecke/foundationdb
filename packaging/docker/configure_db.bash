@@ -27,34 +27,19 @@
 # The name of the coordinator must be defined in the FDB_COORDINATOR environment
 # variable, and it must be a name that can be resolved through DNS.
 
-function create_cluster_file() {
-	FDB_CLUSTER_FILE=${FDB_CLUSTER_FILE:-/etc/foundationdb/fdb.cluster}
-	mkdir -p $(dirname $FDB_CLUSTER_FILE)
-
-	if [[ -n "$FDB_CLUSTER_FILE_CONTENTS" ]]; then
-		echo "$FDB_CLUSTER_FILE_CONTENTS" > $FDB_CLUSTER_FILE
-	elif [[ -n $FDB_COORDINATOR ]]; then
-		coordinator_ip=$(dig +short +search $FDB_COORDINATOR)
-		if [[ -z "$coordinator_ip" ]]; then
-			echo "Failed to look up coordinator address for $FDB_COORDINATOR" 1>&2
-			exit 1
-		fi
-		if [[ -z $CLUSTER_ID ]]; then
-                        echo "CLUSTER_ID environment variable not defined" 1>&2
-                        exit 1
-                fi
-		coordinator_port=${FDB_COORDINATOR_PORT:-4500}
-		echo "export COORDINATOR_IP=$coordinator_ip" >> $env_file
-		echo "export COORDINATOR_PORT=$coordinator_port" >> $env_file
-		source $env_file
-		#echo "$CLUSTER_ID@$coordinator_ip:$coordinator_port,127.0.0.1:4500" > $FDB_CLUSTER_FILE
-		echo "$CLUSTER_ID@$PUBLIC_IP:4500" > $FDB_CLUSTER_FILE
-	else
-		echo "FDB_COORDINATOR environment variable not defined" 1>&2
-		exit 1
-	fi
+function configure_db() {
+	max_retry=10
+	counter=0
+	until fdbcli --exec "configure new single memory" | grep 'Database created'
+	do
+   		sleep 1
+   		[[ counter -eq $max_retry ]] && echo "Failed!" && exit 1
+   		echo "Could not init db yet. Trying again. Try #$counter"
+   		((counter++))
+	done
+	echo "Database created."
 }
 
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
-	create_cluster_file "$@"
+	configure_db "$@"
 fi

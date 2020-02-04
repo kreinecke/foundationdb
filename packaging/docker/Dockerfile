@@ -28,7 +28,7 @@ RUN apt-get update && \
 
 # Install FoundationDB Binaries
 
-ARG FDB_VERSION
+ARG FDB_VERSION=6.1.8
 ARG FDB_WEBSITE=https://www.foundationdb.org
 
 WORKDIR /var/fdb/tmp
@@ -58,6 +58,7 @@ RUN curl $FDB_WEBSITE/downloads/$FDB_VERSION/linux/libfdb_c_$FDB_VERSION.so -o /
 COPY fdb.bash scripts/
 COPY create_server_environment.bash scripts/
 COPY create_cluster_file.bash scripts/
+COPY configure_db.bash scripts/
 RUN chmod u+x scripts/*.bash && \
 	mkdir -p logs
 VOLUME /var/fdb/data
